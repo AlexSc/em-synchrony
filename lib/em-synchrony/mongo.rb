@@ -4,6 +4,12 @@ rescue LoadError => error
   raise "Missing EM-Synchrony dependency: gem install mongo"
 end
 
+if not respond_to? :silence_warnings
+  def silence_warnings
+    yield
+  end
+end
+
 # monkey-patch Mongo to use em-synchrony's socket and thread classs
 silence_warnings do
   class Mongo::Connection
