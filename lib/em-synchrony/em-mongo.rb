@@ -89,6 +89,16 @@ module EM
         end
         alias :first :find_one
 
+        alias :asafe_insert :safe_insert
+        def safe_insert(*args)
+          Synchrony.sync asafe_insert(*args)
+        end
+
+        alias :asafe_update :safe_update
+        def safe_update(*args)
+          Synchrony.sync asafe_update(*args)
+        end
+
       #
       # em-mongo version <= 0.3.6
       #
