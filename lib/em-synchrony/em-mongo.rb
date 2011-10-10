@@ -61,10 +61,8 @@ module EM
 
         alias :afind :find
         def find(*args)
-          f = Fiber.current
           cursor = afind(*args)
-          cursor.to_a.callback{ |res| f.resume(res) }
-          Fiber.yield
+          Synchrony.sync cursor.to_a
         end
 
         # need to rewrite afind_one manually, as it calls 'find' (reasonably
