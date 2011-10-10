@@ -84,8 +84,7 @@ module EM
         alias :afirst :afind_one
 
         def find_one(selector={}, opts={})
-          opts[:limit] = 1
-          find(selector, opts).first
+          Synchrony.sync afind_one(selector, opts)
         end
         alias :first :find_one
 
