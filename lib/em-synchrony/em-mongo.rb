@@ -24,6 +24,11 @@ module EM
           raise AuthenticationError, auth_result2["errmsg"]
         end
       end
+
+      alias :acollections :collections
+      def collections
+        Synchrony.sync acollections
+      end
     end
 
     class Connection
