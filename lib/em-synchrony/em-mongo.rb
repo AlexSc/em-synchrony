@@ -103,6 +103,11 @@ module EM
           Synchrony.sync asafe_update(*args)
         end
 
+        alias :asafe_remove :safe_remove
+        def safe_remove(*args)
+          Synchrony.sync asafe_remove(*args)
+        end
+
       #
       # em-mongo version <= 0.3.6
       #
