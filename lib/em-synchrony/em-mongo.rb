@@ -6,26 +6,6 @@ end
 
 module EM
   module Mongo
-    module Logging
-      def instrument(name, payload = {}, &blk)
-        res = yield
-        log_operation(name, payload)
-        res
-      end
-
-      protected
-      def log_operation(name, payload)
-        @logger ||= nil
-        return unless @logger
-        msg = "#{payload[:database]}['#{payload[:collection]}'].#{name}("
-        msg += payload.values_at(:selector, :document, :documents, :fields ).compact.map(&:inspect).join(', ') + ")"
-        msg += ".skip(#{payload[:skip]})"  if payload[:skip]
-        msg += ".limit(#{payload[:limit]})"  if payload[:limit]
-        msg += ".sort(#{payload[:order]})"  if payload[:order]
-        @logger.debug "MONGODB #{msg}"
-      end
-    end
-
     class Database
       def authenticate(username, password)
         auth_result = self.collection(SYSTEM_COMMAND_COLLECTION).first({'getnonce' => 1})
@@ -64,7 +44,22 @@ module EM
     end
 
     class Collection
-      include Logging
+      def instrument(name, payload = {}, &blk)
+        res = yield
+        log_operation(name, payload)
+        res
+      end
+
+      def log_operation(name, payload)
+        @logger ||= nil
+        return unless @logger
+        msg = "#{payload[:database]}['#{payload[:collection]}'].#{name}("
+        msg += payload.values_at(:selector, :document, :documents, :fields ).compact.map(&:inspect).join(', ') + ")"
+        msg += ".skip(#{payload[:skip]})"  if payload[:skip]
+        msg += ".limit(#{payload[:limit]})"  if payload[:limit]
+        msg += ".sort(#{payload[:order]})"  if payload[:order]
+        @logger.debug "MONGODB #{msg}"
+      end
 
       #
       # The upcoming versions of EM-Mongo change Collection#find's interface: it
