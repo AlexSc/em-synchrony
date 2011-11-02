@@ -6,6 +6,25 @@ end
 
 module EM
   module Mongo
+    module Logging
+      def instrument(name, payload = {}, &blk)
+        res = yield
+        log_operation(name, payload)
+        res
+      end
+
+      protected
+      def log_operation(name, payload)
+        @logger ||= nil
+        return unless @logger
+        msg = "#{payload[:database]}['#{payload[:collection]}'].#{name}("
+        msg += payload.values_at(:selector, :document, :documents, :fields ).compact.map(&:inspect).join(', ') + ")"
+        msg += ".skip(#{payload[:skip]})"  if payload[:skip]
+        msg += ".limit(#{payload[:limit]})"  if payload[:limit]
+        msg += ".sort(#{payload[:order]})"  if payload[:order]
+        @logger.debug "MONGODB #{msg}"
+      end
+    end
 
     class Database
       def authenticate(username, password)
@@ -45,6 +64,7 @@ module EM
     end
 
     class Collection
+      include Logging
 
       #
       # The upcoming versions of EM-Mongo change Collection#find's interface: it
@@ -67,7 +87,9 @@ module EM
         alias :afind :find
         def find(*args)
           cursor = afind(*args)
-          Synchrony.sync cursor.to_a
+          instrument(:find, :database => @db, :collection => name, :selector => cursor.selector, :fields => cursor.fields, :skip => cursor.skip, :limit => cursor.limit, :order => cursor.order) do
+            Synchrony.sync cursor.to_a
+          end
         end
 
         # need to rewrite afind_one manually, as it calls 'find' (reasonably
@@ -89,23 +111,36 @@ module EM
         alias :afirst :afind_one
 
         def find_one(selector={}, opts={})
-          Synchrony.sync afind_one(selector, opts)
+          log = { :database => @db, :collection => name, :selector => selector }
+          log[:fields] = opts[:fields] if opts[:fields]
+          log[:skip] = opts[:skip] if opts[:skip]
+          log[:limit] = opts[:limit] if opts[:limit]
+          log[:order] = opts[:order] if opts[:order]
+          instrument(:find, log) do
+            Synchrony.sync afind_one(selector, opts)
+          end
         end
         alias :first :find_one
 
         alias :asafe_insert :safe_insert
         def safe_insert(*args)
-          Synchrony.sync asafe_insert(*args)
+          instrument(:insert, :database => @db, :collection => name, :documents => args[0]) do
+            Synchrony.sync asafe_insert(*args)
+          end
         end
 
         alias :asafe_update :safe_update
         def safe_update(*args)
-          Synchrony.sync asafe_update(*args)
+          instrument(:update, :database => @db, :collection => name, :selector => args[0]) do
+            Synchrony.sync asafe_update(*args)
+          end
         end
 
         alias :asafe_remove :safe_remove
         def safe_remove(*args)
-          Synchrony.sync asafe_remove(*args)
+          instrument(:remove, :database => @db, :collection => name, :selector =>args[0]) do
+            Synchrony.sync asafe_remove(*args)
+          end
         end
 
       #
